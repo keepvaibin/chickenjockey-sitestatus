@@ -55,7 +55,8 @@ export default function PartialHelp() {
       <div
         role="dialog"
         className={[
-          "absolute left-1/2 top-full z-50 mt-2 w-[min(92vw,280px)] -translate-x-1/2 md:left-auto md:right-0 md:translate-x-0",
+          // CHANGED: Removed `md:left-auto md:right-0 md:translate-x-0` so it stays centered
+          "absolute left-1/2 top-full z-50 mt-2 w-[min(92vw,280px)] -translate-x-1/2",
           "rounded-xl border border-zinc-200 bg-white p-3 text-xs text-zinc-700 shadow-lg",
           "duration-150 ease-out",
           "dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-200",
@@ -82,7 +83,8 @@ export default function PartialHelp() {
 
         <div
           className={[
-            "absolute -top-1 left-1/2 -translate-x-1/2 md:left-auto md:right-6 md:translate-x-0 h-2 w-2 rotate-45",
+            // CHANGED: Removed `md:left-auto md:right-6 md:translate-x-0` so the arrow stays centered
+            "absolute -top-1 left-1/2 -translate-x-1/2 h-2 w-2 rotate-45",
             "border-l border-t border-zinc-200 bg-white",
             "dark:border-zinc-800 dark:bg-zinc-950"
           ].join(" ")}

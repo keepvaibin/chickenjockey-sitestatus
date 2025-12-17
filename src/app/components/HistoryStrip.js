@@ -16,7 +16,6 @@ function stateLabel(state) {
   return "Down";
 }
 
-
 export default function HistoryStrip({ dots }) {
   if (!dots) {
     return (
@@ -94,22 +93,6 @@ export default function HistoryStrip({ dots }) {
           );
         })}
       </div>
-
-      <div className="mt-2 flex flex-wrap items-center gap-3 text-[11px] text-zinc-500 dark:text-zinc-400">
-        <LegendDot className={COLORS.up} label="Online" />
-        <LegendDot className={COLORS.mostly} label="Mostly online" />
-        <LegendDot className={COLORS.partial} label="Partial" />
-        <LegendDot className={COLORS.down} label="Down" />
-      </div>
     </div>
-  );
-}
-
-function LegendDot({ className, label }) {
-  return (
-    <span className="inline-flex items-center gap-1.5">
-      <span className={`h-[7px] w-[7px] rounded-full ${className}`} />
-      <span>{label}</span>
-    </span>
   );
 }
