@@ -36,7 +36,8 @@ export default function StatusCard({ targetId, title, subtitle }) {
     dedupingInterval: 10 * 1000
   });
 
-  const latestNorm = normalizeLatest(latest.data, targetId);
+  // UPDATED: Pass history.data as the 3rd argument
+  const latestNorm = normalizeLatest(latest.data, targetId, history.data);
   const isUp = latestNorm?.up === true;
 
   const dots = useMemo(() => {

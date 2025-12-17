@@ -10,20 +10,22 @@ export function buildMinuteStatusMap(historyArray, targetId) {
   for (const row of historyArray || []) {
     if (!row || row.target_id !== targetId) continue;
     const mk = minuteKeyFromSeconds(row.timestamp);
-    const up = String(row.status).toUpperCase() === "UP";
+    
+    // For the dots history: 
+    // If status is INVALID, we treat it as "UP" (optimistic) to avoid ugly gaps 
+    // in the visual timeline, or you can treat it as missing. 
+    // Here we treat INVALID as UP for the visual strip only.
+    const s = String(row.status).toUpperCase();
+    const up = (s === "UP" || s === "INVALID");
+    
     map.set(mk, up);
   }
   return map;
 }
 
-/**
- * 7 days -> 10080 minutes -> 168 hourly dots.
- * Missing minutes are treated as offline.
- * Each dot includes upMinutes/downMinutes so we can show precise tooltip + partial meaning.
- */
 export function build7DayHourlyDots(historyArray, targetId, nowMs = Date.now()) {
-  const totalMinutes = 7 * 24 * 60;      // 10080
-  const intervalMinutes = 60;            // 1 hour
+  const totalMinutes = 7 * 24 * 60;
+  const intervalMinutes = 60;
   const nowSeconds = nowMs / 1000;
 
   const endMinute = minuteKeyFromSeconds(nowSeconds);
@@ -39,7 +41,7 @@ export function build7DayHourlyDots(historyArray, targetId, nowMs = Date.now()) 
     for (let mm = m; mm < m + intervalMinutes; mm++) {
       const v = statusByMinute.get(mm);
       if (v === true) upMinutes++;
-      else downMinutes++; // down OR missing => offline
+      else downMinutes++;
     }
 
     let state = "down";
@@ -60,7 +62,7 @@ export function build7DayHourlyDots(historyArray, targetId, nowMs = Date.now()) 
     });
   }
 
-  return dots; // length 168
+  return dots;
 }
 
 export function formatShortTimeRange(startMinuteKey, endMinuteKey) {
@@ -79,18 +81,57 @@ export function formatShortTimeRange(startMinuteKey, endMinuteKey) {
   return `${d1} ${t1} → ${d2} ${t2}`;
 }
 
-export function normalizeLatest(latestObj, targetId) {
+// --- UPDATED LOGIC HERE ---
+export function normalizeLatest(latestObj, targetId, historyArray = []) {
   const raw = latestObj?.[targetId];
   if (!raw) return null;
 
-  const up = String(raw.status).toUpperCase() === "UP";
+  const s = String(raw.status).toUpperCase();
 
+  // 1. If status is valid (UP/DOWN/ERR), return it immediately.
+  if (s !== "INVALID") {
+    return {
+      targetId,
+      up: s === "UP",
+      latencyMs: raw.latency_ms ?? null,
+      playersOnline: raw.players_online ?? null,
+      playersMax: raw.players_max ?? null,
+      timestamp: raw.timestamp ?? null
+    };
+  }
+
+  // 2. If status is INVALID, search history for the LAST KNOWN STATE.
+  // The history API returns data sorted by timestamp DESC (newest first).
+  // We just find the first row that is NOT invalid.
+  
+  let fallbackRow = null;
+  if (historyArray && Array.isArray(historyArray)) {
+    fallbackRow = historyArray.find(r => 
+      r.target_id === targetId && 
+      String(r.status).toUpperCase() !== "INVALID"
+    );
+  }
+
+  // If we found a fallback, use its data.
+  if (fallbackRow) {
+    const fallbackStatus = String(fallbackRow.status).toUpperCase();
+    return {
+      targetId,
+      up: fallbackStatus === "UP", // Use the old status (Online OR Offline)
+      latencyMs: fallbackRow.latency_ms ?? null,
+      playersOnline: fallbackRow.players_online ?? null,
+      playersMax: fallbackRow.players_max ?? null,
+      timestamp: fallbackRow.timestamp ?? null // Use OLD timestamp to be honest
+    };
+  }
+
+  // 3. If no history or all history is invalid, default to Offline.
   return {
     targetId,
-    up,
-    latencyMs: raw.latency_ms ?? null,
-    playersOnline: raw.players_online ?? null,
-    playersMax: raw.players_max ?? null,
+    up: false,
+    latencyMs: null,
+    playersOnline: null,
+    playersMax: null,
     timestamp: raw.timestamp ?? null
   };
 }
@@ -107,7 +148,6 @@ export function computeUptimePercent(historyArray, targetId, minutesWindow, nowM
 
   for (let m = startMinute; m <= endMinute; m++) {
     const v = statusByMinute.get(m);
-    // missing => offline
     if (v === true) up++;
     total++;
   }
