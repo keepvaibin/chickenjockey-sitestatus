@@ -3,7 +3,6 @@ import StatusCard from "./components/StatusCard";
 import PartialHelp from "./components/PartialHelp";
 import McBanner from "./components/McBanner";
 
-// This is the new Legend component using your exact colors
 function StatusLegend() {
   return (
     <div className="mt-8 flex flex-wrap justify-center gap-6 text-xs text-zinc-600 dark:text-zinc-400">
@@ -32,11 +31,11 @@ export default function Page() {
     <main className="min-h-screen bg-grid overflow-x-hidden">
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="flex flex-col items-center text-center">
-          <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
+          <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
             ChickenJockey Status
           </h1>
 
-          <p className="mt-3 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
+          <p className="mt-5 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
             Live status + 7-day history (missing data is treated as offline).
           </p>
 
@@ -50,24 +49,46 @@ export default function Page() {
           </div>
         </header>
 
+        {/* LAYOUT LOGIC:
+            - Mobile (default): Stacked in DOM order (Minecraft -> Map -> Website)
+            - Desktop (md): Visually reordered using 'order' classes (Map -> Minecraft -> Website)
+        */}
         <section className="mt-5 grid grid-cols-1 justify-items-center gap-6 md:grid-cols-3 md:justify-items-stretch">
-          <div className="w-full max-w-md md:max-w-none">
-            <StatusCard targetId="site" title="Website" subtitle="chickenjockey.lol" />
+          
+          {/* 1. Minecraft (Mobile: Top / Desktop: Middle) */}
+          <div className="w-full max-w-md md:max-w-none md:order-2">
+            <StatusCard 
+              targetId="mc" 
+              title="Minecraft Server" 
+              subtitle="chickenjockey.lol" 
+            />
           </div>
-          <div className="w-full max-w-md md:max-w-none">
-            <StatusCard targetId="map" title="Map" subtitle="map.chickenjockey.lol" />
+
+          {/* 2. Map (Mobile: Middle / Desktop: Left) */}
+          <div className="w-full max-w-md md:max-w-none md:order-1">
+            <StatusCard 
+              targetId="map" 
+              title="Map" 
+              subtitle="map.chickenjockey.lol" 
+            />
           </div>
-          <div className="w-full max-w-md md:max-w-none">
-            <StatusCard targetId="mc" title="Minecraft" subtitle="mc.chickenjockey.lol" />
+
+          {/* 3. Website (Mobile: Bottom / Desktop: Right) */}
+          <div className="w-full max-w-md md:max-w-none md:order-3">
+            <StatusCard 
+              targetId="site" 
+              title="Website" 
+              subtitle="site.chickenjockey.lol" 
+            />
           </div>
+
         </section>
 
         <footer className="mt-0 flex flex-col items-center gap-4 text-center">
-            {/* The Legend is now placed here */}
             <StatusLegend />
             
             <div className="text-xs text-zinc-500 dark:text-zinc-500">
-                The site status updates every minute.{" "}
+                Data updates every minute. Data might not be up-to-date immediately.
             </div>
         </footer>
       </div>
