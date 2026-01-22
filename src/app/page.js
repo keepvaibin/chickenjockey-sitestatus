@@ -39,6 +39,10 @@ export default function Page() {
             Live status + 7-day history (missing data is treated as offline).
           </p>
 
+          <p className="mt-1 max-w-xl text-xs text-zinc-500 dark:text-zinc-500">
+            (if you are unable to see a status, assume the server is currently down)
+          </p>
+
           <div className="mt-4 w-full max-w-3xl">
             <McBanner />
           </div>

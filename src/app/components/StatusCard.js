@@ -1,7 +1,8 @@
+// src/app/components/StatusCard.js
 "use client";
 
+import { useEffect, useMemo, useRef, useState } from "react";
 import useSWR from "swr";
-import { useMemo } from "react";
 import HistoryStrip from "./HistoryStrip";
 import {
   API_HISTORY,
@@ -19,6 +20,8 @@ const fetcher = (url) =>
     return r.json();
   });
 
+const RETENTION_SECONDS = 7 * 24 * 60 * 60;
+
 function pillClass(up) {
   return up
     ? "bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 dark:bg-emerald-900/20 dark:text-emerald-200 dark:ring-emerald-800"
@@ -26,42 +29,102 @@ function pillClass(up) {
 }
 
 export default function StatusCard({ targetId, title, subtitle }) {
-  const history = useSWR(API_HISTORY, fetcher, {
-    refreshInterval: 5 * 60 * 1000,
-    dedupingInterval: 30 * 1000
+  // 1) Ticking clock so “Updated: 12s ago” is live
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => setNowMs(Date.now()), 5000);
+    return () => clearInterval(id);
+  }, []);
+
+  // 2) Fetch history ONCE (seed)
+  const historySeed = useSWR(API_HISTORY, fetcher, {
+    refreshInterval: 0,
+    revalidateOnFocus: false,
+    dedupingInterval: 60 * 1000
   });
 
+  // 3) Local mini-db of history (DESC)
+  const [historyLocal, setHistoryLocal] = useState(null);
+
+  useEffect(() => {
+    if (historySeed.data && !historyLocal) {
+      setHistoryLocal(historySeed.data);
+    }
+  }, [historySeed.data, historyLocal]);
+
+  // 4) Fetch latest every 60s
   const latest = useSWR(API_LATEST, fetcher, {
     refreshInterval: 60 * 1000,
-    dedupingInterval: 10 * 1000
+    dedupingInterval: 10 * 1000,
+    revalidateOnFocus: true
   });
 
-  // UPDATED: Pass history.data as the 3rd argument
-  const latestNorm = normalizeLatest(latest.data, targetId, history.data);
+  // Prevent duplicate inserts
+  const lastSeenTsRef = useRef(new Map()); // id -> last timestamp inserted
+
+  useEffect(() => {
+    if (!latest.data) return;
+
+    setHistoryLocal((prev) => {
+      if (!prev) return prev;
+
+      const next = Array.isArray(prev) ? [...prev] : [];
+      const cutoff = nowMs / 1000 - RETENTION_SECONDS;
+
+      // latest.data looks like: { mc: {...}, map: {...}, site: {...} }
+      for (const [id, row] of Object.entries(latest.data)) {
+        if (!row?.timestamp) continue;
+
+        const lastSeen = lastSeenTsRef.current.get(id);
+        if (lastSeen && row.timestamp <= lastSeen) continue;
+
+        lastSeenTsRef.current.set(id, row.timestamp);
+
+        // Insert newest at front
+        next.unshift({
+          timestamp: row.timestamp,
+          target_id: row.target_id ?? id,
+          status: row.status,
+          latency_ms: row.latency_ms ?? 0,
+          players_online: row.players_online ?? 0,
+          players_max: row.players_max ?? 0
+        });
+      }
+
+      // prune >7 days old
+      return next.filter((r) => (r?.timestamp ?? 0) >= cutoff);
+    });
+  }, [latest.data, nowMs]);
+
+  // Normalize latest using local history for INVALID fallback
+  const latestNorm = normalizeLatest(latest.data, targetId, historyLocal);
   const isUp = latestNorm?.up === true;
 
   const dots = useMemo(() => {
-    if (!history.data) return null;
-    return build7DayHourlyDots(history.data, targetId);
-  }, [history.data, targetId]);
+    if (!historyLocal) return null;
+    return build7DayHourlyDots(historyLocal, targetId, nowMs);
+  }, [historyLocal, targetId, nowMs]);
 
   const uptime24h = useMemo(() => {
-    if (!history.data) return null;
-    return computeUptimePercent(history.data, targetId, 24 * 60);
-  }, [history.data, targetId]);
+    if (!historyLocal) return null;
+    return computeUptimePercent(historyLocal, targetId, 24 * 60, nowMs);
+  }, [historyLocal, targetId, nowMs]);
 
   const uptime7d = useMemo(() => {
-    if (!history.data) return null;
-    return computeUptimePercent(history.data, targetId, 7 * 24 * 60);
-  }, [history.data, targetId]);
+    if (!historyLocal) return null;
+    return computeUptimePercent(historyLocal, targetId, 7 * 24 * 60, nowMs);
+  }, [historyLocal, targetId, nowMs]);
 
   const updatedRel = latestNorm?.timestamp
-    ? formatRelativeTimeFromSeconds(latestNorm.timestamp)
+    ? formatRelativeTimeFromSeconds(latestNorm.timestamp, nowMs)
     : "—";
 
   const updatedExact = latestNorm?.timestamp
     ? new Date(latestNorm.timestamp * 1000).toLocaleString()
     : "—";
+
+  // Per your site note: if we cannot determine status, assume down
+  const pillLabel = latestNorm ? (isUp ? "Online" : "Offline") : "Offline";
 
   return (
     <div
@@ -76,9 +139,7 @@ export default function StatusCard({ targetId, title, subtitle }) {
         <div className="min-w-0">
           <h2 className="text-lg font-semibold tracking-tight">{title}</h2>
           {subtitle && (
-            <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">
-              {subtitle}
-            </p>
+            <p className="mt-0.5 text-sm text-zinc-500 dark:text-zinc-400">{subtitle}</p>
           )}
         </div>
 
@@ -89,7 +150,7 @@ export default function StatusCard({ targetId, title, subtitle }) {
           ].join(" ")}
         >
           <span className={["h-2 w-2 rounded-full", isUp ? "bg-emerald-500" : "bg-zinc-500"].join(" ")} />
-          {latestNorm ? (isUp ? "Online" : "Offline") : "Loading…"}
+          {latestNorm ? pillLabel : "Loading…"}
         </span>
       </div>
 
@@ -128,14 +189,18 @@ export default function StatusCard({ targetId, title, subtitle }) {
         ) : (
           <div className="text-sm text-zinc-600 dark:text-zinc-400">
             {latestNorm?.latencyMs != null ? (
-              <>Latency: <span className="mono">{latestNorm.latencyMs}ms</span></>
+              <>
+                Latency: <span className="mono">{latestNorm.latencyMs}ms</span>
+              </>
             ) : (
-              <>Latency: <span className="text-zinc-400">—</span></>
+              <>
+                Latency: <span className="text-zinc-400">—</span>
+              </>
             )}
           </div>
         )}
 
-        {(history.error || latest.error) && (
+        {(historySeed.error || latest.error) && (
           <div className="mt-2 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:border-amber-900/40 dark:bg-amber-900/10 dark:text-amber-200">
             Trouble reaching the API. Showing what we can.
           </div>

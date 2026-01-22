@@ -1,3 +1,4 @@
+// src/lib/statusMath.js
 export const API_HISTORY = "https://api.chickenjockey.lol/history";
 export const API_LATEST = "https://api.chickenjockey.lol/latest";
 
@@ -7,21 +8,27 @@ export function minuteKeyFromSeconds(tsSeconds) {
 
 export function buildMinuteStatusMap(historyArray, targetId) {
   const map = new Map();
+
+  // historyArray is DESC (newest first). Keep the newest sample per minute.
   for (const row of historyArray || []) {
     if (!row || row.target_id !== targetId) continue;
+
     const mk = minuteKeyFromSeconds(row.timestamp);
-    
-    // For the dots history: 
-    // If status is INVALID, we treat it as "UP" (optimistic) to avoid ugly gaps 
-    // in the visual timeline, or you can treat it as missing. 
-    // Here we treat INVALID as UP for the visual strip only.
-    const s = String(row.status).toUpperCase();
-    const up = (s === "UP" || s === "INVALID");
-    
-    map.set(mk, up);
+
+    // Because we're reading newest->oldest, the first value we see for a minute is the newest.
+    // So if it's already present, skip (don't let older samples overwrite newer ones).
+    if (map.has(mk)) continue;
+
+    const s = String(row.status || "").toUpperCase();
+
+    // Match UI promise: missing/invalid treated as offline.
+    // UP => true, everything else => false
+    map.set(mk, s === "UP");
   }
+
   return map;
 }
+
 
 export function build7DayHourlyDots(historyArray, targetId, nowMs = Date.now()) {
   const totalMinutes = 7 * 24 * 60;
@@ -44,13 +51,12 @@ export function build7DayHourlyDots(historyArray, targetId, nowMs = Date.now()) 
       else downMinutes++;
     }
 
-    let state = "down";
     const upPct = (upMinutes / intervalMinutes) * 100;
 
+    let state = "down";
     if (upPct >= 97) state = "up";
     else if (upPct >= 85) state = "mostly";
     else if (upPct >= 50) state = "partial";
-    else state = "down";
 
     dots.push({
       state,
@@ -81,14 +87,14 @@ export function formatShortTimeRange(startMinuteKey, endMinuteKey) {
   return `${d1} ${t1} → ${d2} ${t2}`;
 }
 
-// --- UPDATED LOGIC HERE ---
+// If latest is INVALID, fall back to last known non-INVALID in history
 export function normalizeLatest(latestObj, targetId, historyArray = []) {
   const raw = latestObj?.[targetId];
   if (!raw) return null;
 
   const s = String(raw.status).toUpperCase();
 
-  // 1. If status is valid (UP/DOWN/ERR), return it immediately.
+  // 1) If status is valid (UP/DOWN/ERR-*), return it
   if (s !== "INVALID") {
     return {
       targetId,
@@ -100,32 +106,28 @@ export function normalizeLatest(latestObj, targetId, historyArray = []) {
     };
   }
 
-  // 2. If status is INVALID, search history for the LAST KNOWN STATE.
-  // The history API returns data sorted by timestamp DESC (newest first).
-  // We just find the first row that is NOT invalid.
-  
+  // 2) INVALID -> search history for the last known non-INVALID row
   let fallbackRow = null;
   if (historyArray && Array.isArray(historyArray)) {
-    fallbackRow = historyArray.find(r => 
-      r.target_id === targetId && 
-      String(r.status).toUpperCase() !== "INVALID"
+    fallbackRow = historyArray.find(
+      (r) => r.target_id === targetId && String(r.status).toUpperCase() !== "INVALID"
     );
   }
 
-  // If we found a fallback, use its data.
   if (fallbackRow) {
     const fallbackStatus = String(fallbackRow.status).toUpperCase();
     return {
       targetId,
-      up: fallbackStatus === "UP", // Use the old status (Online OR Offline)
+      up: fallbackStatus === "UP",
       latencyMs: fallbackRow.latency_ms ?? null,
       playersOnline: fallbackRow.players_online ?? null,
       playersMax: fallbackRow.players_max ?? null,
-      timestamp: fallbackRow.timestamp ?? null // Use OLD timestamp to be honest
+      // keep the OLD timestamp to be honest
+      timestamp: fallbackRow.timestamp ?? null
     };
   }
 
-  // 3. If no history or all history is invalid, default to Offline.
+  // 3) No usable history -> offline
   return {
     targetId,
     up: false,
@@ -159,8 +161,6 @@ export function computeUptimePercent(historyArray, targetId, minutesWindow, nowM
 export function formatPercent(p) {
   if (!Number.isFinite(p)) return "—";
   if (p >= 99.995) return "100.00%";
-  if (p >= 99.95) return p.toFixed(2) + "%";
-  if (p >= 10) return p.toFixed(2) + "%";
   return p.toFixed(2) + "%";
 }
 
