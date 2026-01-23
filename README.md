@@ -1,6 +1,6 @@
-# ChickenJockey Status Dashboard
+# ucscmc Status Dashboard
 
-A high-availability observability dashboard engineered to monitor the real-time status, latency, and uptime history of the ChickenJockey infrastructure (Minecraft Server, Map, and Website). This application leverages **Next.js (App Router)** for server-side rendering and **SWR** for efficient client-side data synchronization.
+A high-availability observability dashboard engineered to monitor the real-time status, latency, and uptime history of the ucscmc infrastructure (Minecraft Server, Map, and Website). This application leverages **Next.js (App Router)** for server-side rendering and **SWR** for efficient client-side data synchronization.
 
 ## 🚀 Key Features
 
@@ -24,7 +24,7 @@ A high-availability observability dashboard engineered to monitor the real-time 
 The application logic is centralized within `src/lib/statusMath.js`, handling raw data transformation and statistical aggregation.
 
 ### 1. Data Ingestion Strategy
-The dashboard consumes two distinct endpoints from `api.chickenjockey.lol` to balance freshness with payload size:
+The dashboard consumes two distinct endpoints from `api.ucscmc.com` to balance freshness with payload size:
 - **Snapshot Stream (`/latest`)**: Polled every **60 seconds** to provide immediate "Up/Down" status and latency metrics.
 - **Historical Stream (`/history`)**: Polled every **5 minutes** to retrieve the minute-by-minute dataset used for uptime calculation and visualization.
 
@@ -80,8 +80,8 @@ Service health is categorized based on the percentage of successful "UP" pings w
 
 1. **Clone the Repository**
 ```bash
-git clone [https://github.com/your-username/chickenjockey-status.git](https://github.com/your-username/chickenjockey-status.git)
-cd chickenjockey-status
+git clone [https://github.com/your-username/ucscmc-status.git](https://github.com/your-username/ucscmc-status.git)
+cd ucscmc-status
 
 ```
 

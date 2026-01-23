@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "ChickenJockey Status",
-  description: "Status + uptime for ChickenJockey services."
+  title: "ucscmc Status",
+  description: "Status + uptime for ucscmc services."
 };
 
 const themeInitScript = `

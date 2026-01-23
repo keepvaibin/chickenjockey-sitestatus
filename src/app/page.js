@@ -32,7 +32,7 @@ export default function Page() {
       <div className="mx-auto max-w-6xl px-4 py-10">
         <header className="flex flex-col items-center text-center">
           <h1 className="text-4xl font-bold tracking-tight text-zinc-900 dark:text-zinc-100">
-            ChickenJockey Status
+            ucscmc Status
           </h1>
 
           <p className="mt-5 max-w-xl text-sm text-zinc-600 dark:text-zinc-400">
@@ -64,7 +64,7 @@ export default function Page() {
             <StatusCard 
               targetId="mc" 
               title="Minecraft Server" 
-              subtitle="chickenjockey.lol" 
+              subtitle="ucscmc.com" 
             />
           </div>
 
@@ -73,7 +73,7 @@ export default function Page() {
             <StatusCard 
               targetId="map" 
               title="Map" 
-              subtitle="map.chickenjockey.lol" 
+              subtitle="map.ucscmc.com" 
             />
           </div>
 
@@ -82,7 +82,7 @@ export default function Page() {
             <StatusCard 
               targetId="site" 
               title="Website" 
-              subtitle="site.chickenjockey.lol" 
+              subtitle="site.ucscmc.com" 
             />
           </div>
 

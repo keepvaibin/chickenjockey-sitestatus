@@ -1,6 +1,6 @@
 // src/lib/statusMath.js
-export const API_HISTORY = "https://api.chickenjockey.lol/history";
-export const API_LATEST = "https://api.chickenjockey.lol/latest";
+export const API_HISTORY = "https://api.ucscmc.com/history";
+export const API_LATEST = "https://api.ucscmc.com/latest";
 
 export function minuteKeyFromSeconds(tsSeconds) {
   return Math.floor(tsSeconds / 60);
