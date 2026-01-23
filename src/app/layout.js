@@ -1,8 +1,8 @@
 import "./globals.css";
 
 export const metadata = {
-  title: "ucscmc Status",
-  description: "Status + uptime for ucscmc services."
+  title: "UCSCMC Status",
+  description: "Status + Uptime for UCSCMC Services."
 };
 
 const themeInitScript = `

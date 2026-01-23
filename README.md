@@ -1,6 +1,6 @@
-# ucscmc Status Dashboard
+# UCSCMC Status Dashboard
 
-A high-availability observability dashboard engineered to monitor the real-time status, latency, and uptime history of the ucscmc infrastructure (Minecraft Server, Map, and Website). This application leverages **Next.js (App Router)** for server-side rendering and **SWR** for efficient client-side data synchronization.
+A high-availability observability dashboard engineered to monitor the real-time status, latency, and uptime history of the UCSCMC infrastructure (Minecraft Server, Map, and Website). This application leverages **Next.js (App Router)** for server-side rendering and **SWR** for efficient client-side data synchronization.
 
 ## 🚀 Key Features
 
